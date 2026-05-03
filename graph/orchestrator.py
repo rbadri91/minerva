@@ -1,12 +1,12 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
+from agents.manager_agent import run_manager
 from graph.state import ResearchState
 
 
 def plan_node(state: ResearchState) -> dict:
-    # TODO Phase 2: call manager_agent to produce a real research plan
-    return {"status_updates": ["[placeholder] Planning step"]}
+    return run_manager(state)
 
 
 def research_worker_node(state: ResearchState) -> dict:
