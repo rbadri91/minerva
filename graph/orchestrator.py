@@ -2,7 +2,9 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
 from agents.manager_agent import run_manager
-from graph.state import ResearchState
+from agents.reader_agent import run_reader_worker
+from agents.search_agent import run_search_worker
+from graph.state import ResearchState, WorkerResult
 
 
 def plan_node(state: ResearchState) -> dict:
@@ -10,8 +12,26 @@ def plan_node(state: ResearchState) -> dict:
 
 
 def research_worker_node(state: ResearchState) -> dict:
-    # TODO Phase 3: call search_agent / reader_agent based on current_subtopic
-    return {"worker_results": [], "status_updates": ["[placeholder] Worker step"]}
+    subtopic = state["current_subtopic"]
+    worker_type = subtopic["worker_type"]
+
+    if worker_type == "reader":
+        result: WorkerResult = run_reader_worker(subtopic)
+    elif worker_type == "both":
+        search_result = run_search_worker(subtopic)
+        reader_result = run_reader_worker(subtopic)
+        result = WorkerResult(
+            subtopic=subtopic["subtopic"],
+            content=search_result["content"] + "\n\n" + reader_result["content"],
+            sources=list({*search_result["sources"], *reader_result["sources"]}),
+            from_cache=False,
+            worker_type="both",
+        )
+    else:
+        result = run_search_worker(subtopic)
+
+    label = f"Worker [{subtopic['index']}] '{subtopic['subtopic']}': done"
+    return {"worker_results": [result], "status_updates": [label]}
 
 
 def synthesis_node(state: ResearchState) -> dict:
