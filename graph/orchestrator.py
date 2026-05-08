@@ -2,6 +2,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
 from agents.manager_agent import run_manager
+from agents.memory_agent import lookup, store
 from agents.reader_agent import run_reader_worker
 from agents.search_agent import run_search_worker
 from graph.state import ResearchState, WorkerResult
@@ -13,6 +14,13 @@ def plan_node(state: ResearchState) -> dict:
 
 def research_worker_node(state: ResearchState) -> dict:
     subtopic = state["current_subtopic"]
+
+    # Phase 4: memory-first — skip web if cache hit
+    cached = lookup(subtopic)
+    if cached is not None:
+        label = f"Worker [{subtopic['index']}] '{subtopic['subtopic']}': cache hit"
+        return {"worker_results": [cached], "status_updates": [label]}
+
     worker_type = subtopic["worker_type"]
 
     if worker_type == "reader":
@@ -29,6 +37,8 @@ def research_worker_node(state: ResearchState) -> dict:
         )
     else:
         result = run_search_worker(subtopic)
+
+    store(subtopic, result["content"], result["sources"])
 
     label = f"Worker [{subtopic['index']}] '{subtopic['subtopic']}': done"
     return {"worker_results": [result], "status_updates": [label]}
