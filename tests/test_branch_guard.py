@@ -106,6 +106,34 @@ def test_auto_creates_branch_for_merged_branch(repo: Path):
     assert new_branch.startswith("feature/work-"), f"Unexpected branch name: {new_branch}"
 
 
+def test_allows_renamed_branch_with_stale_tracking(repo: Path):
+    """Rule 3: a locally-renamed branch whose remote tracking points to the old name
+    should pass through silently — it hasn't been merged, just renamed locally."""
+    # Push a feature branch then locally rename it (simulates what branch-guard.sh
+    # itself does when the user renames after the auto-create)
+    _git(["checkout", "-b", "feature/old-name"], repo, check=True)
+    (repo / "feat.txt").write_text("feat")
+    _git(["add", "feat.txt"], repo, check=True)
+    _git(["commit", "-m", "feat"], repo, check=True)
+    _git(["push", "-u", "origin", "feature/old-name"], repo, check=True)
+
+    # Merge into master so the branch is 0 commits ahead
+    _git(["checkout", "master"], repo, check=True)
+    _git(["merge", "--ff-only", "feature/old-name"], repo, check=True)
+    _git(["push", "origin", "master"], repo, check=True)
+
+    # Rename locally — tracking still points to origin/feature/old-name
+    _git(["checkout", "feature/old-name"], repo, check=True)
+    _git(["branch", "-m", "feature/old-name", "feature/new-name"], repo, check=True)
+
+    # Hook must NOT auto-create a branch: local name ≠ remote tracking name
+    code, data = _run_hook(repo)
+
+    assert code == 0
+    assert data == {}, f"Expected silent pass-through for renamed branch, got: {data}"
+    assert _git(["rev-parse", "--abbrev-ref", "HEAD"], repo).stdout.strip() == "feature/new-name"
+
+
 def test_allows_wip_branch(repo: Path):
     """Rule 3: a branch with unmerged commits passes through silently."""
     _git(["checkout", "-b", "feature/wip"], repo, check=True)

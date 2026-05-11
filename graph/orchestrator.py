@@ -5,6 +5,7 @@ from agents.manager_agent import run_manager
 from agents.memory_agent import lookup, store
 from agents.reader_agent import run_reader_worker
 from agents.search_agent import run_search_worker
+from agents.synthesis_agent import run_synthesis
 from graph.state import ResearchState, WorkerResult
 
 
@@ -45,8 +46,8 @@ def research_worker_node(state: ResearchState) -> dict:
 
 
 def synthesis_node(state: ResearchState) -> dict:
-    # TODO Phase 5: call synthesis_agent to produce the final report
-    return {"final_report": "[placeholder] Final report", "status_updates": ["[placeholder] Synthesis step"]}
+    report = run_synthesis(state)
+    return {"final_report": report, "status_updates": ["Synthesis complete"]}
 
 
 def dispatch_workers(state: ResearchState) -> list[Send]:

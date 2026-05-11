@@ -1,0 +1,11 @@
+[run]
+source = agents, graph, ui
+omit =
+    ui/app.py
+    */tests/*
+    */__init__.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:

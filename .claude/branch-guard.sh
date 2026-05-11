@@ -22,8 +22,12 @@ fi
 # ── Rule 2: detect a merged branch and spin up a new one ──────────────────────
 AHEAD=$(git log origin/master..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
 TRACKING=$(git rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null)
+# Strip "origin/" prefix to get the remote branch name
+REMOTE_BRANCH="${TRACKING#origin/}"
 
-if [ "$AHEAD" -eq 0 ] && [ -n "$TRACKING" ]; then
+# Only trigger if the local name matches the remote name — a renamed local branch
+# (local=feature/new-name, remote=origin/feature/old-name) should pass through as Rule 3.
+if [ "$AHEAD" -eq 0 ] && [ -n "$TRACKING" ] && [ "$BRANCH" = "$REMOTE_BRANCH" ]; then
     NEW_BRANCH="feature/work-$(date +%Y%m%d-%H%M%S)"
     git checkout -b "$NEW_BRANCH" 2>/dev/null
     printf '{"systemMessage": "Branch guard: auto-created branch %s (branch %s appears to be fully merged into master)."}\n' "$NEW_BRANCH" "$BRANCH"
