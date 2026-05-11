@@ -78,9 +78,9 @@ def test_blocks_on_master(repo: Path):
     assert _git(["rev-parse", "--abbrev-ref", "HEAD"], repo).stdout.strip() == "master"
 
 
-def test_auto_creates_branch_for_merged_branch(repo: Path):
+def test_blocks_merged_branch(repo: Path):
     """Rule 2: if a pushed branch has 0 commits ahead of origin/master the hook
-    auto-creates a new feature branch and emits a systemMessage."""
+    blocks and tells Claude to create a descriptively-named branch."""
     # Feature work on a branch, pushed, then merged into master
     _git(["checkout", "-b", "feature/done"], repo, check=True)
     (repo / "work.txt").write_text("work")
@@ -98,12 +98,10 @@ def test_auto_creates_branch_for_merged_branch(repo: Path):
     code, data = _run_hook(repo)
 
     assert code == 0
-    assert "systemMessage" in data, f"Expected systemMessage in output, got: {data}"
-    assert "auto-created" in data["systemMessage"].lower()
-
-    new_branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], repo).stdout.strip()
-    assert new_branch != "feature/done", "Should have switched to a new branch"
-    assert new_branch.startswith("feature/work-"), f"Unexpected branch name: {new_branch}"
+    assert data.get("continue") is False
+    assert "feature/done" in data.get("stopReason", "")
+    # Hook must NOT switch branches — Claude will create one with a meaningful name
+    assert _git(["rev-parse", "--abbrev-ref", "HEAD"], repo).stdout.strip() == "feature/done"
 
 
 def test_allows_renamed_branch_with_stale_tracking(repo: Path):
