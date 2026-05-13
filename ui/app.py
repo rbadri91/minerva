@@ -1,4 +1,9 @@
 """Phase 5 — Streamlit UI for Minerva deep research assistant."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import streamlit as st
 
 from graph.orchestrator import build_graph
